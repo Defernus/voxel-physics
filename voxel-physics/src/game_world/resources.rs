@@ -1,32 +1,15 @@
-use std::{borrow::Cow, ops::Deref};
+use std::{borrow::Cow, mem::size_of, ops::Deref};
 
 use bevy::{
     prelude::*,
     render::{extract_resource::ExtractResource, render_resource::*, renderer::RenderDevice},
 };
 
-#[derive(Clone, Debug, Resource, Reflect, Default, ExtractResource)]
-#[reflect(Resource)]
-pub struct GameWorldImage(pub Handle<Image>);
+use super::WORLD_SIZE;
 
-impl Deref for GameWorldImage {
-    type Target = Handle<Image>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl From<Handle<Image>> for GameWorldImage {
-    fn from(handle: Handle<Image>) -> Self {
-        Self(handle)
-    }
-}
-
-impl From<GameWorldImage> for Handle<Image> {
-    fn from(image: GameWorldImage) -> Self {
-        image.0
-    }
+#[derive(Clone, Debug, Resource, ExtractResource)]
+pub struct GameWorldHandlers {
+    pub image: Handle<Image>,
 }
 
 #[derive(Clone, Debug, Resource, ExtractResource)]

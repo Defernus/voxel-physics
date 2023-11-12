@@ -19,9 +19,26 @@ fn randomFloat(value: u32) -> f32 {
 fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>, @builtin(num_workgroups) num_workgroups: vec3<u32>) {
     let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let randomNumber = randomFloat(invocation_id.y * num_workgroups.x + invocation_id.x);
-    let alive = randomNumber > 0.9;
-    let color = vec4<f32>(f32(alive));
+    let index = invocation_id.y * num_workgroups.x + invocation_id.x;
+
+    let random_number = randomFloat(index);
+    if random_number < 0.999 {
+        textureStore(texture, location, vec4<f32>(0.0, 0.0, 0.0, 1.0));
+        return;
+    }
+
+
+    let type_number = randomFloat(index + num_workgroups.x * num_workgroups.y);
+
+    var color = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+
+    if type_number < 0.33 {
+        color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+    } else if type_number < 0.66 {
+        color = vec4<f32>(0.0, 1.0, 0.0, 1.0);
+    } else {
+        color = vec4<f32>(0.0, 0.0, 1.0, 1.0);
+    }
 
     textureStore(texture, location, color);
 }
@@ -34,47 +51,53 @@ fn is_out_of_bounds(pos: vec2<i32>) -> bool {
     return false;
 }
 
-fn is_solid(location: vec2<i32>, offset_x: i32, offset_y: i32) -> bool {
-    let pos = location + vec2<i32>(offset_x, -offset_y);
-
-    if is_out_of_bounds(pos) {
+/// Channels:
+/// - r - rock
+/// - g - paper
+/// - b - scissors
+/// - a - empty
+fn is_lose(current: vec4<f32>, neighbor: vec4<f32>) -> bool {
+    if current.x > 0.5 && neighbor.y > 0.5 {
         return true;
     }
-
-    let value: vec4<f32> = textureLoad(texture, pos);
-    return bool(value.x);
-}
-
-fn is_sand(location: vec2<i32>, offset_x: i32, offset_y: i32) -> bool {
-    let pos = location + vec2<i32>(offset_x, -offset_y);
-
-    if is_out_of_bounds(pos) {
-        return false;
+    if current.y > 0.5 && neighbor.z > 0.5 {
+        return true;
     }
-
-    let value: vec4<f32> = textureLoad(texture, pos);
-    return bool(value.x);
+    if current.z > 0.5 && neighbor.x > 0.5 {
+        return true;
+    }
+    return  current.x < 0.5 && current.y < 0.5 && current.z < 0.5
+        && (neighbor.x > 0.5 || neighbor.y > 0.5 || neighbor.z > 0.5);
 }
 
 @compute @workgroup_size(8, 8, 1)
 fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    var alive = is_sand(location, 0, 0) || is_sand(location, 0, 1);
+    let color = textureLoad(texture, location);
 
-    if is_sand(location, 0, 0) && !is_solid(location, 0, -1) {
-        alive = false;
-    } else if is_sand(location, 0, 0) && !is_solid(location, 1, 0) && !is_solid(location, 1, -1) {
-        alive = false;
-    } else if !is_sand(location, 0, 0) && is_sand(location, -1, 1) && is_solid(location, -1, 0) && !is_solid(location, 0, 1) {
-        alive = true;
-    } else if is_sand(location, 0, 0) && !is_solid(location, -1, 0) && !is_solid(location, -1, -1) {
-        alive = false;
-    } else if !is_sand(location, 0, 0) && is_sand(location, 1, 1) && is_solid(location, 1, 0) && !is_solid(location, 0, 1) {
-        alive = true;
+    for (var x = -1; x <= 1; x = x + 1) {
+        for (var y = -1; y <= 1; y = y + 1) {
+            if (x == 0 && y == 0) {
+                continue;
+            }
+
+            let pos = location + vec2<i32>(x, y);
+
+            if is_out_of_bounds(pos) {
+                continue;
+            }
+
+            let neighbor = textureLoad(texture, pos);
+
+            if is_lose(color, neighbor) {
+                storageBarrier();
+
+                textureStore(texture, location, neighbor);
+                return;
+            }
+        }
     }
-
-    let color = vec4<f32>(f32(alive));
 
     storageBarrier();
 

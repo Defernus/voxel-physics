@@ -4,15 +4,11 @@ use bevy::{
 };
 
 use crate::{
-    game_world::{GameWorldImage, WORLD_SIZE},
+    game_world::{GameWorldHandlers, WORLD_SIZE},
     utils::image::ImageUtils,
 };
 
-pub fn world_init_sys(
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-    mut world_image: ResMut<GameWorldImage>,
-) {
+pub fn world_init_sys(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     commands.spawn(Camera2dBundle::default());
 
     let image = Image::new_fill(
@@ -39,5 +35,5 @@ pub fn world_init_sys(
         ..default()
     });
 
-    *world_image = image.into();
+    commands.insert_resource(GameWorldHandlers { image });
 }

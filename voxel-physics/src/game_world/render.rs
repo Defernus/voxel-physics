@@ -3,6 +3,8 @@ use bevy::{
     render::{render_graph, render_resource::*, renderer::RenderContext},
 };
 
+use crate::utils::pipeline_state::PipelineStateUtils;
+
 use super::{GameWorldBindGroup, GameWorldPipeline, WORKGROUP_SIZE, WORLD_SIZE};
 
 enum GameWorldState {
@@ -31,15 +33,17 @@ impl render_graph::Node for GameWorldNode {
         // if the corresponding pipeline has loaded, transition to the next stage
         match self.state {
             GameWorldState::Loading => {
-                if let CachedPipelineState::Ok(_) =
-                    pipeline_cache.get_compute_pipeline_state(pipeline.init_pipeline)
+                if pipeline_cache
+                    .get_compute_pipeline_state(pipeline.init_pipeline)
+                    .is_ok()
                 {
                     self.state = GameWorldState::Init;
                 }
             }
             GameWorldState::Init => {
-                if let CachedPipelineState::Ok(_) =
-                    pipeline_cache.get_compute_pipeline_state(pipeline.update_pipeline)
+                if pipeline_cache
+                    .get_compute_pipeline_state(pipeline.update_pipeline)
+                    .is_ok()
                 {
                     self.state = GameWorldState::Update;
                 }
@@ -65,30 +69,20 @@ impl render_graph::Node for GameWorldNode {
         pass.set_bind_group(0, texture_bind_group, &[]);
 
         // select the pipeline based on the current state
-        match self.state {
-            GameWorldState::Loading => {}
-            GameWorldState::Init => {
-                let init_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipeline.init_pipeline)
-                    .unwrap();
-                pass.set_pipeline(init_pipeline);
-                pass.dispatch_workgroups(
-                    WORLD_SIZE.0 / WORKGROUP_SIZE,
-                    WORLD_SIZE.1 / WORKGROUP_SIZE,
-                    1,
-                );
-            }
-            GameWorldState::Update => {
-                let update_pipeline = pipeline_cache
-                    .get_compute_pipeline(pipeline.update_pipeline)
-                    .unwrap();
-                pass.set_pipeline(update_pipeline);
-                pass.dispatch_workgroups(
-                    WORLD_SIZE.0 / WORKGROUP_SIZE,
-                    WORLD_SIZE.1 / WORKGROUP_SIZE,
-                    1,
-                );
-            }
+        let pipeline = match self.state {
+            GameWorldState::Loading => None,
+            GameWorldState::Init => Some(pipeline.init_pipeline),
+            GameWorldState::Update => Some(pipeline.update_pipeline),
+        };
+
+        if let Some(pipeline) = pipeline {
+            let pipeline = pipeline_cache.get_compute_pipeline(pipeline).unwrap();
+            pass.set_pipeline(pipeline);
+            pass.dispatch_workgroups(
+                WORLD_SIZE.0 / WORKGROUP_SIZE,
+                WORLD_SIZE.1 / WORKGROUP_SIZE,
+                1,
+            );
         }
 
         Ok(())

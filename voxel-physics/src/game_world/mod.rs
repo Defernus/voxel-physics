@@ -24,11 +24,9 @@ impl Plugin for GameWorldPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, world_init_sys);
 
-        app.init_and_register_res::<GameWorldImage>();
-
         // Extract the game of life image resource from the main world into the render world
         // for operation on by the compute shader and display on the sprite.
-        app.add_plugins(ExtractResourcePlugin::<GameWorldImage>::default());
+        app.add_plugins(ExtractResourcePlugin::<GameWorldHandlers>::default());
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(
             Render,
