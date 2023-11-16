@@ -50,7 +50,7 @@ pub fn world_init_sys(
 
     let data = render_device.create_buffer_with_data(&BufferInitDescriptor {
         label: None,
-        contents: &data,
+        contents: data,
         usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
     });
 
