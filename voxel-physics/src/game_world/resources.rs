@@ -4,6 +4,7 @@ use bevy::{
     prelude::*,
     render::{extract_resource::ExtractResource, render_resource::*, renderer::RenderDevice},
 };
+use bytemuck::{Pod, Zeroable};
 
 use super::WORLD_SIZE;
 
@@ -31,6 +32,24 @@ pub struct GameWorldPipeline {
     pub update_pipeline: CachedComputePipelineId,
 }
 
+#[derive(Clone, Copy, Pod, Zeroable)]
+#[repr(C)]
+pub struct CellData {
+    pub state: u32,
+    pub prev_state: u32,
+    pub transition: f32,
+}
+
+impl Default for CellData {
+    fn default() -> Self {
+        Self {
+            state: 0,
+            prev_state: 0,
+            transition: 1.0,
+        }
+    }
+}
+
 impl FromWorld for GameWorldPipeline {
     fn from_world(world: &mut World) -> Self {
         let world_bind_group_layout =
@@ -56,7 +75,7 @@ impl FromWorld for GameWorldPipeline {
                                 ty: BufferBindingType::Storage { read_only: false },
                                 has_dynamic_offset: false,
                                 min_binding_size: BufferSize::new(
-                                    ((WORLD_SIZE.0 * WORLD_SIZE.1) as usize * size_of::<Vec4>())
+                                    ((WORLD_SIZE.0 * WORLD_SIZE.1) as usize * size_of::<CellData>())
                                         as u64,
                                 ),
                             },

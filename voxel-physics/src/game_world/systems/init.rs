@@ -10,7 +10,7 @@ use bevy::{
 };
 
 use crate::{
-    game_world::{GameWorldData, WORLD_SIZE},
+    game_world::{CellData, GameWorldData, WORLD_SIZE},
     utils::image::ImageUtils,
 };
 
@@ -45,7 +45,7 @@ pub fn world_init_sys(
         ..default()
     });
 
-    let data = vec![Vec4::new(0.0, 0.0, 1.0, 0.0); (WORLD_SIZE.0 * WORLD_SIZE.1) as usize];
+    let data = vec![CellData::default(); (WORLD_SIZE.0 * WORLD_SIZE.1) as usize];
     let data = bytemuck::cast_slice(&data);
 
     let data = render_device.create_buffer_with_data(&BufferInitDescriptor {
