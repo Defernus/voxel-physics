@@ -32,22 +32,13 @@ pub struct GameWorldPipeline {
     pub update_pipeline: CachedComputePipelineId,
 }
 
-#[derive(Clone, Copy, Pod, Zeroable)]
+#[derive(Default, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 pub struct CellData {
-    pub state: u32,
-    pub prev_state: u32,
-    pub transition: f32,
-}
-
-impl Default for CellData {
-    fn default() -> Self {
-        Self {
-            state: 0,
-            prev_state: 0,
-            transition: 1.0,
-        }
-    }
+    pub gravity: f32,
+    pub particle_type: u32,
+    pub mass: f32,
+    pub impulse: Vec2,
 }
 
 impl FromWorld for GameWorldPipeline {
