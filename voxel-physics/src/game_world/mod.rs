@@ -1,11 +1,10 @@
 use bevy::prelude::*;
 use bevy::render::extract_resource::ExtractResourcePlugin;
+use bevy::render::main_graph::node::CAMERA_DRIVER;
 use bevy::render::render_graph::RenderGraph;
 use bevy::render::Render;
 use bevy::render::RenderApp;
 use bevy::render::RenderSet;
-
-use crate::utils::add_resource::AddAndRegisterRes;
 
 pub use self::constants::*;
 use self::render::GameWorldNode;
@@ -26,7 +25,7 @@ impl Plugin for GameWorldPlugin {
 
         // Extract the game of life image resource from the main world into the render world
         // for operation on by the compute shader and display on the sprite.
-        app.add_plugins(ExtractResourcePlugin::<GameWorldHandlers>::default());
+        app.add_plugins(ExtractResourcePlugin::<GameWorldData>::default());
         let render_app = app.sub_app_mut(RenderApp);
         render_app.add_systems(
             Render,
@@ -35,7 +34,7 @@ impl Plugin for GameWorldPlugin {
 
         let mut render_graph = render_app.world.resource_mut::<RenderGraph>();
         render_graph.add_node("game_world", GameWorldNode::default());
-        render_graph.add_node_edge("game_world", bevy::render::main_graph::node::CAMERA_DRIVER);
+        render_graph.add_node_edge("game_world", CAMERA_DRIVER);
     }
 
     fn finish(&self, app: &mut App) {

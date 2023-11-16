@@ -62,9 +62,12 @@ impl render_graph::Node for GameWorldNode {
         let pipeline_cache = world.resource::<PipelineCache>();
         let pipeline = world.resource::<GameWorldPipeline>();
 
-        let mut pass = render_context
-            .command_encoder()
-            .begin_compute_pass(&ComputePassDescriptor::default());
+        let mut pass =
+            render_context
+                .command_encoder()
+                .begin_compute_pass(&ComputePassDescriptor {
+                    label: Some("GameWorld compute pass"),
+                });
 
         pass.set_bind_group(0, texture_bind_group, &[]);
 

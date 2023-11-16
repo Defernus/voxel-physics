@@ -1,4 +1,12 @@
 @group(0) @binding(0) var texture: texture_storage_2d<rgba8unorm, read_write>;
+@group(0) @binding(1) var<storage, read_write> data: array<vec4<f32>>;
+
+const WORLD_WIDTH = 1280i;
+const WORLD_HEIGHT = 720i;
+
+fn is_out_of_bounds(l: vec2<i32>) -> bool {
+    return l.y < 0 || l.y >= WORLD_HEIGHT || l.x < 0 || l.x >= WORLD_WIDTH;
+}
 
 fn hash(value: u32) -> u32 {
     var state = value;
@@ -11,8 +19,27 @@ fn hash(value: u32) -> u32 {
     return state;
 }
 
-fn randomFloat(value: u32) -> f32 {
+fn random_float(value: u32) -> f32 {
     return f32(hash(value)) / 4294967295.0;
+}
+
+/// Set vec4 to data array
+fn set_cell_data(location: vec2<i32>, value: vec4<f32>) {
+    if is_out_of_bounds(location) {
+        return;
+    }
+
+    let index = location.y * WORLD_WIDTH + location.x;
+    data[index] = value;
+}
+
+/// Get vec4 from data array
+fn get_cell_data(location: vec2<i32>) -> vec4<f32> {
+    if is_out_of_bounds(location) {
+        return vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    }
+    let index = location.y * WORLD_WIDTH + location.x;
+    return data[index];
 }
 
 @compute @workgroup_size(8, 8, 1)
@@ -21,34 +48,26 @@ fn init(@builtin(global_invocation_id) invocation_id: vec3<u32>, @builtin(num_wo
 
     let index = invocation_id.y * num_workgroups.x + invocation_id.x;
 
-    let random_number = randomFloat(index);
+    let random_number = random_float(index);
     if random_number < 0.999 {
-        textureStore(texture, location, vec4<f32>(0.0, 0.0, 0.0, 1.0));
+        set_cell_data(location, vec4<f32>(0.0, 0.0, 0.0, 0.0));
         return;
     }
 
 
-    let type_number = randomFloat(index + num_workgroups.x * num_workgroups.y);
+    let type_number = random_float(index + num_workgroups.x * num_workgroups.y);
 
-    var color = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    var cell = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
     if type_number < 0.33 {
-        color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+        cell = vec4<f32>(1.0, 0.0, 0.0, 0.0);
     } else if type_number < 0.66 {
-        color = vec4<f32>(0.0, 1.0, 0.0, 1.0);
+        cell = vec4<f32>(0.0, 1.0, 0.0, 0.0);
     } else {
-        color = vec4<f32>(0.0, 0.0, 1.0, 1.0);
+        cell = vec4<f32>(0.0, 0.0, 1.0, 0.0);
     }
 
-    textureStore(texture, location, color);
-}
-
-fn is_out_of_bounds(pos: vec2<i32>) -> bool {
-    if pos.y < 0 || pos.y >= i32(textureDimensions(texture).y) || pos.x < 0 || pos.x >= i32(textureDimensions(texture).x) {
-        return true;
-    }
-
-    return false;
+    set_cell_data(location, cell);
 }
 
 /// Channels:
@@ -74,7 +93,17 @@ fn is_lose(current: vec4<f32>, neighbor: vec4<f32>) -> bool {
 fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     let location = vec2<i32>(i32(invocation_id.x), i32(invocation_id.y));
 
-    let color = textureLoad(texture, location);
+    var current_cell = get_cell_data(location);
+
+    let color = vec4<f32>(current_cell.x, current_cell.y, current_cell.z, 1.0);
+
+    if is_out_of_bounds(location) {
+        // storageBarrier();
+
+        textureStore(texture, location, color);
+        return;
+    }
+
 
     for (var x = -1; x <= 1; x = x + 1) {
         for (var y = -1; y <= 1; y = y + 1) {
@@ -88,18 +117,19 @@ fn update(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
                 continue;
             }
 
-            let neighbor = textureLoad(texture, pos);
+            let neighbor_cell = get_cell_data(pos);
 
-            if is_lose(color, neighbor) {
-                storageBarrier();
+            if is_lose(current_cell, neighbor_cell) {
+                set_cell_data(location, neighbor_cell);
+                // storageBarrier();
 
-                textureStore(texture, location, neighbor);
+                textureStore(texture, location, vec4<f32>(neighbor_cell.x, neighbor_cell.y, neighbor_cell.z, 1.0));
                 return;
             }
         }
     }
 
-    storageBarrier();
+    // storageBarrier();
 
     textureStore(texture, location, color);
 }

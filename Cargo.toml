@@ -14,6 +14,7 @@ keywords = ["boilerplate", "workspace", "example", "preset"]
 bevy = { version = "0.12.0", features = ["dynamic_linking"] }
 bevy-inspector-egui = "0.21.0"
 rand = "0.8.5"
+bytemuck = "1.14.0"
 
 # project crates
 voxel-physics = { version = "0.1.0", path = "./voxel-physics" }

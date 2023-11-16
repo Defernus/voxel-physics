@@ -12,3 +12,4 @@ keywords = { workspace = true }
 bevy = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 rand = { workspace = true }
+bytemuck = { workspace = true }
