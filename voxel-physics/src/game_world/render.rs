@@ -123,7 +123,6 @@ impl render_graph::Node for GameWorldNode {
                 });
 
         pass.set_bind_group(0, world_bind_group, &[]);
-
         if self.pre_update_required() {
             let pipeline = pipeline_cache
                 .get_compute_pipeline(pipeline.pre_update_pipeline)
