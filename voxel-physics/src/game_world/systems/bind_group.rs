@@ -12,10 +12,12 @@ pub fn prepare_bind_group_sys(
     mut commands: Commands,
     pipeline: Res<GameWorldPipeline>,
     gpu_images: Res<RenderAssets<Image>>,
-    game_world_data: Res<GameWorldData>,
+    mut game_world_data: ResMut<GameWorldData>,
     render_device: Res<RenderDevice>,
     fallback_image: Res<FallbackImage>,
 ) {
+    game_world_data.swap();
+
     let prepared = game_world_data
         .as_bind_group(
             &pipeline.world_bind_group_layout,

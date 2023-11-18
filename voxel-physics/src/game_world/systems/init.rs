@@ -10,7 +10,7 @@ use bevy::{
 };
 
 use crate::{
-    game_world::{CellData, GameWorldData, WORLD_SIZE},
+    game_world::{CellData, GameWorldData, WorldSprite, WORLD_SIZE},
     utils::image::ImageUtils,
 };
 
@@ -36,23 +36,35 @@ pub fn world_init_sys(
     );
     let image = images.add(image);
 
-    commands.spawn(SpriteBundle {
-        sprite: Sprite {
-            custom_size: Some(Vec2::new(WORLD_SIZE.0 as f32, WORLD_SIZE.1 as f32)),
+    commands
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(WORLD_SIZE.0 as f32, WORLD_SIZE.1 as f32)),
+                ..default()
+            },
+            texture: image.clone(),
             ..default()
-        },
-        texture: image.clone(),
-        ..default()
-    });
+        })
+        .insert(WorldSprite);
 
     let data = vec![CellData::default(); (WORLD_SIZE.0 * WORLD_SIZE.1) as usize];
     let data = bytemuck::cast_slice(&data);
 
-    let data = render_device.create_buffer_with_data(&BufferInitDescriptor {
+    let data_prev = render_device.create_buffer_with_data(&BufferInitDescriptor {
         label: None,
         contents: data,
         usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
     });
 
-    commands.insert_resource(GameWorldData { image, data });
+    let data_next = render_device.create_buffer_with_data(&BufferInitDescriptor {
+        label: None,
+        contents: data,
+        usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+    });
+
+    commands.insert_resource(GameWorldData {
+        image,
+        data_prev,
+        data_next,
+    });
 }

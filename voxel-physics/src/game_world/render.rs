@@ -10,7 +10,9 @@ use super::{GameWorldBindGroup, GameWorldPipeline, WORKGROUP_SIZE, WORLD_SIZE};
 enum GameWorldState {
     Loading,
     Init,
-    Update,
+    UpdateGravity,
+    UpdateImpulse,
+    UpdatePosition,
 }
 
 pub struct GameWorldNode {
@@ -42,13 +44,36 @@ impl render_graph::Node for GameWorldNode {
             }
             GameWorldState::Init => {
                 if pipeline_cache
-                    .get_compute_pipeline_state(pipeline.update_pipeline)
+                    .get_compute_pipeline_state(pipeline.update_gravity_pipeline)
                     .is_ok()
                 {
-                    self.state = GameWorldState::Update;
+                    self.state = GameWorldState::UpdateGravity;
                 }
             }
-            GameWorldState::Update => {}
+            GameWorldState::UpdateGravity => {
+                if pipeline_cache
+                    .get_compute_pipeline_state(pipeline.update_impulse_pipeline)
+                    .is_ok()
+                {
+                    self.state = GameWorldState::UpdateImpulse;
+                }
+            }
+            GameWorldState::UpdateImpulse => {
+                if pipeline_cache
+                    .get_compute_pipeline_state(pipeline.update_position_pipeline)
+                    .is_ok()
+                {
+                    self.state = GameWorldState::UpdatePosition;
+                }
+            }
+            GameWorldState::UpdatePosition => {
+                if pipeline_cache
+                    .get_compute_pipeline_state(pipeline.update_gravity_pipeline)
+                    .is_ok()
+                {
+                    self.state = GameWorldState::UpdateGravity;
+                }
+            }
         }
     }
 
@@ -58,7 +83,7 @@ impl render_graph::Node for GameWorldNode {
         render_context: &mut RenderContext,
         world: &World,
     ) -> Result<(), render_graph::NodeRunError> {
-        let texture_bind_group = world.resource::<GameWorldBindGroup>();
+        let world_bind_group = world.resource::<GameWorldBindGroup>();
         let pipeline_cache = world.resource::<PipelineCache>();
         let pipeline = world.resource::<GameWorldPipeline>();
 
@@ -69,13 +94,15 @@ impl render_graph::Node for GameWorldNode {
                     label: Some("GameWorld compute pass"),
                 });
 
-        pass.set_bind_group(0, texture_bind_group, &[]);
+        pass.set_bind_group(0, world_bind_group, &[]);
 
         // select the pipeline based on the current state
         let pipeline = match self.state {
             GameWorldState::Loading => None,
             GameWorldState::Init => Some(pipeline.init_pipeline),
-            GameWorldState::Update => Some(pipeline.update_pipeline),
+            GameWorldState::UpdateGravity => Some(pipeline.update_gravity_pipeline),
+            GameWorldState::UpdateImpulse => Some(pipeline.update_impulse_pipeline),
+            GameWorldState::UpdatePosition => Some(pipeline.update_position_pipeline),
         };
 
         if let Some(pipeline) = pipeline {
